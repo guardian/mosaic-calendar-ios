@@ -19,6 +19,9 @@ struct CalendarMonthGridView<Cell: View>: View {
     // Optional view provided for each of the weekday labels above the grid.
     let weekdayLabelContent: ((String) -> AnyView)?
 
+    // Optional callback fired on every day tap, including re-selecting the same date.
+    let onDayTapped: (Date) -> Void
+
     let columns = Array(
         repeating: GridItem(.flexible(), spacing: 0),
         count: 7
@@ -31,6 +34,7 @@ struct CalendarMonthGridView<Cell: View>: View {
                     if let date {
                         Button {
                             selectedDate = date
+                            onDayTapped(date)
                         } label: {
                             cellContent(representable(for: date))
                         }

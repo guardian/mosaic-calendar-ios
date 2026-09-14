@@ -240,7 +240,6 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
                 notifyMonthChange()
             }
         }
-        .onChange(of: selectedDate) { notifyDateSelect() }
     }
 
     private func syncHeaderContext() {
@@ -257,9 +256,13 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
     }
 
     /// Invokes the registered handler with the selected date and its mark.
-    private func notifyDateSelect() {
-        guard let date = selectedDate else { return }
+    private func notifyDateSelect(_ date: Date) {
         dateSelectHandler?(date, daysByDate[date.beginningOfDay])
+    }
+
+    private func handleDayTapped(_ date: Date) {
+        selectedDate = date
+        notifyDateSelect(date)
     }
 
     // MARK: - Paging grid
@@ -277,7 +280,8 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
                             selectedDate: $selectedDate,
                             daysByDate: daysByDate,
                             cellContent: cellContent,
-                            weekdayLabelContent: weekdayLabelContent
+                            weekdayLabelContent: weekdayLabelContent,
+                            onDayTapped: handleDayTapped
                         )
                         .aspectRatio(1, contentMode: .fit)
                         .containerRelativeFrame(.horizontal, alignment: .top)
