@@ -15,8 +15,13 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
     /// Observable month state consumed by custom headers.
     @State var headerContext: CalendarHeaderContext
 
+    /// Source days used to build month cells. Binding keeps updates reactive.
+    @Binding private var days: [any CalendarDayRepresentable]
+
     /// Days keyed by the start of their date.
-    private let daysByDate: [Date: any CalendarDayRepresentable]
+    private var daysByDate: [Date: any CalendarDayRepresentable] {
+        Self.makeDaysByDate(from: days)
+    }
 
     /// Builds the view for a given day.
     private let cellContent: (any CalendarDayRepresentable) -> Cell
@@ -45,33 +50,29 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
         @ViewBuilder cell: @escaping (any CalendarDayRepresentable) -> Cell,
         @ViewBuilder header: @escaping (CalendarHeaderContext) -> Header
     ) {
-        let calendar = Calendar.current
-
-        daysByDate = Dictionary(
-            days.map { (calendar.startOfDay(for: $0.date), $0) },
-            uniquingKeysWith: { first, _ in first }
+        self.init(
+            days: .constant(days),
+            range: range,
+            cellContent: cell,
+            headerContent: header,
+            weekdayLabelContent: nil,
+            monthPickerCellContent: nil
         )
-        cellContent = cell
-        headerContent = header
-        weekdayLabelContent = nil
-        monthPickerCellContent = nil
+    }
 
-        let anchor = calendar.date(from: calendar.dateComponents([.year, .month], from: .now)) ?? .now
-        months = Self.makeVisibleMonths(calendar: calendar, range: range, anchor: anchor)
-
-        // Start centered on the current month or clamp to the nearest month in range.
-        let initialMonth = Self.initialMonth(for: anchor, in: months)
-        let minimumVisibleYear = calendar.component(.year, from: months.first ?? anchor)
-        let maximumVisibleYear = calendar.component(.year, from: months.last ?? anchor)
-        _scrolledMonth = State(initialValue: initialMonth)
-        _headerContext = State(
-            initialValue: CalendarHeaderContext(
-                month: initialMonth,
-                canGoToPreviousMonth: initialMonth != months.first,
-                canGoToNextMonth: initialMonth != months.last,
-                minimumVisibleYear: minimumVisibleYear,
-                maximumVisibleYear: maximumVisibleYear
-            )
+    public init(
+        days: Binding<[any CalendarDayRepresentable]>,
+        range: ClosedRange<Date>? = nil,
+        @ViewBuilder cell: @escaping (any CalendarDayRepresentable) -> Cell,
+        @ViewBuilder header: @escaping (CalendarHeaderContext) -> Header
+    ) {
+        self.init(
+            days: days,
+            range: range,
+            cellContent: cell,
+            headerContent: header,
+            weekdayLabelContent: nil,
+            monthPickerCellContent: nil
         )
     }
 
@@ -82,33 +83,30 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
         @ViewBuilder header: @escaping (CalendarHeaderContext) -> Header,
         @ViewBuilder weekday: @escaping (String) -> WeekdayLabel
     ) {
-        let calendar = Calendar.current
-
-        daysByDate = Dictionary(
-            days.map { (calendar.startOfDay(for: $0.date), $0) },
-            uniquingKeysWith: { first, _ in first }
+        self.init(
+            days: .constant(days),
+            range: range,
+            cellContent: cell,
+            headerContent: header,
+            weekdayLabelContent: { symbol in AnyView(weekday(symbol)) },
+            monthPickerCellContent: nil
         )
-        cellContent = cell
-        headerContent = header
-        weekdayLabelContent = { symbol in AnyView(weekday(symbol)) }
-        monthPickerCellContent = nil
+    }
 
-        let anchor = calendar.date(from: calendar.dateComponents([.year, .month], from: .now)) ?? .now
-        months = Self.makeVisibleMonths(calendar: calendar, range: range, anchor: anchor)
-
-        // Start centered on the current month or clamp to the nearest month in range.
-        let initialMonth = Self.initialMonth(for: anchor, in: months)
-        let minimumVisibleYear = calendar.component(.year, from: months.first ?? anchor)
-        let maximumVisibleYear = calendar.component(.year, from: months.last ?? anchor)
-        _scrolledMonth = State(initialValue: initialMonth)
-        _headerContext = State(
-            initialValue: CalendarHeaderContext(
-                month: initialMonth,
-                canGoToPreviousMonth: initialMonth != months.first,
-                canGoToNextMonth: initialMonth != months.last,
-                minimumVisibleYear: minimumVisibleYear,
-                maximumVisibleYear: maximumVisibleYear
-            )
+    public init<WeekdayLabel: CalendarWeekdayViewable>(
+        days: Binding<[any CalendarDayRepresentable]>,
+        range: ClosedRange<Date>? = nil,
+        @ViewBuilder cell: @escaping (any CalendarDayRepresentable) -> Cell,
+        @ViewBuilder header: @escaping (CalendarHeaderContext) -> Header,
+        @ViewBuilder weekday: @escaping (String) -> WeekdayLabel
+    ) {
+        self.init(
+            days: days,
+            range: range,
+            cellContent: cell,
+            headerContent: header,
+            weekdayLabelContent: { symbol in AnyView(weekday(symbol)) },
+            monthPickerCellContent: nil
         )
     }
 
@@ -119,33 +117,30 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
         @ViewBuilder header: @escaping (CalendarHeaderContext) -> Header,
         @ViewBuilder monthPickerCell: @escaping (CalendarMonthPickerCellContext) -> MonthPickerCell
     ) {
-        let calendar = Calendar.current
-
-        daysByDate = Dictionary(
-            days.map { (calendar.startOfDay(for: $0.date), $0) },
-            uniquingKeysWith: { first, _ in first }
+        self.init(
+            days: .constant(days),
+            range: range,
+            cellContent: cell,
+            headerContent: header,
+            weekdayLabelContent: nil,
+            monthPickerCellContent: { context in AnyView(monthPickerCell(context)) }
         )
-        cellContent = cell
-        headerContent = header
-        weekdayLabelContent = nil
-        monthPickerCellContent = { context in AnyView(monthPickerCell(context)) }
- 
-        let anchor = calendar.date(from: calendar.dateComponents([.year, .month], from: .now)) ?? .now
-        months = Self.makeVisibleMonths(calendar: calendar, range: range, anchor: anchor)
+    }
 
-        // Start centered on the current month or clamp to the nearest month in range.
-        let initialMonth = Self.initialMonth(for: anchor, in: months)
-        let minimumVisibleYear = calendar.component(.year, from: months.first ?? anchor)
-        let maximumVisibleYear = calendar.component(.year, from: months.last ?? anchor)
-        _scrolledMonth = State(initialValue: initialMonth)
-        _headerContext = State(
-            initialValue: CalendarHeaderContext(
-                month: initialMonth,
-                canGoToPreviousMonth: initialMonth != months.first,
-                canGoToNextMonth: initialMonth != months.last,
-                minimumVisibleYear: minimumVisibleYear,
-                maximumVisibleYear: maximumVisibleYear
-            )
+    public init<MonthPickerCell: CalendarMonthViewable>(
+        days: Binding<[any CalendarDayRepresentable]>,
+        range: ClosedRange<Date>? = nil,
+        @ViewBuilder cell: @escaping (any CalendarDayRepresentable) -> Cell,
+        @ViewBuilder header: @escaping (CalendarHeaderContext) -> Header,
+        @ViewBuilder monthPickerCell: @escaping (CalendarMonthPickerCellContext) -> MonthPickerCell
+    ) {
+        self.init(
+            days: days,
+            range: range,
+            cellContent: cell,
+            headerContent: header,
+            weekdayLabelContent: nil,
+            monthPickerCellContent: { context in AnyView(monthPickerCell(context)) }
         )
     }
 
@@ -157,16 +152,49 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
         @ViewBuilder weekday: @escaping (String) -> WeekdayLabel,
         @ViewBuilder month: @escaping (CalendarMonthPickerCellContext) -> MonthPickerCell
     ) {
+        self.init(
+            days: .constant(days),
+            range: range,
+            cellContent: cell,
+            headerContent: header,
+            weekdayLabelContent: { symbol in AnyView(weekday(symbol)) },
+            monthPickerCellContent: { context in AnyView(month(context)) }
+        )
+    }
+
+    public init<WeekdayLabel: CalendarWeekdayViewable, MonthPickerCell: CalendarMonthViewable>(
+        days: Binding<[any CalendarDayRepresentable]>,
+        range: ClosedRange<Date>? = nil,
+        @ViewBuilder cell: @escaping (any CalendarDayRepresentable) -> Cell,
+        @ViewBuilder header: @escaping (CalendarHeaderContext) -> Header,
+        @ViewBuilder weekday: @escaping (String) -> WeekdayLabel,
+        @ViewBuilder month: @escaping (CalendarMonthPickerCellContext) -> MonthPickerCell
+    ) {
+        self.init(
+            days: days,
+            range: range,
+            cellContent: cell,
+            headerContent: header,
+            weekdayLabelContent: { symbol in AnyView(weekday(symbol)) },
+            monthPickerCellContent: { context in AnyView(month(context)) }
+        )
+    }
+
+    private init(
+        days: Binding<[any CalendarDayRepresentable]>,
+        range: ClosedRange<Date>?,
+        cellContent: @escaping (any CalendarDayRepresentable) -> Cell,
+        headerContent: @escaping (CalendarHeaderContext) -> Header,
+        weekdayLabelContent: ((String) -> AnyView)?,
+        monthPickerCellContent: ((CalendarMonthPickerCellContext) -> AnyView)?
+    ) {
         let calendar = Calendar.current
 
-        daysByDate = Dictionary(
-            days.map { (calendar.startOfDay(for: $0.date), $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
-        cellContent = cell
-        headerContent = header
-        weekdayLabelContent = { symbol in AnyView(weekday(symbol)) }
-        monthPickerCellContent = { context in AnyView(month(context)) }
+        _days = days
+        self.cellContent = cellContent
+        self.headerContent = headerContent
+        self.weekdayLabelContent = weekdayLabelContent
+        self.monthPickerCellContent = monthPickerCellContent
 
         let anchor = calendar.date(from: calendar.dateComponents([.year, .month], from: .now)) ?? .now
         months = Self.makeVisibleMonths(calendar: calendar, range: range, anchor: anchor)
@@ -184,6 +212,14 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
                 minimumVisibleYear: minimumVisibleYear,
                 maximumVisibleYear: maximumVisibleYear
             )
+        )
+    }
+
+    private static func makeDaysByDate(from days: [any CalendarDayRepresentable]) -> [Date: any CalendarDayRepresentable] {
+        let calendar = Calendar.current
+        return Dictionary(
+            days.map { (calendar.startOfDay(for: $0.date), $0) },
+            uniquingKeysWith: { first, _ in first }
         )
     }
 
