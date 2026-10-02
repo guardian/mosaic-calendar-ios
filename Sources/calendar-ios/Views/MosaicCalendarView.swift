@@ -1,5 +1,7 @@
 import SwiftUI
 
+private let monthPagerCoordinateSpace = "MosaicCalendarPager"
+
 @MainActor
 public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarDayViewable>: View {
 
@@ -11,6 +13,9 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
 
     /// Ensures initial pager recentering only runs once per view lifecycle.
     @State private var didRunInitialPagerRecentering = false
+
+    /// Continuously updated during horizontal drag to smoothly blend month heights.
+    @State private var interactiveMonthGridAspectRatio: CGFloat?
 
     /// Observable month state consumed by custom headers.
     @State var headerContext: CalendarHeaderContext
@@ -312,7 +317,7 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
             ZStack(alignment: .top) {
                 if headerContext.displayMode == .month {
                     pager
-                        .aspectRatio(monthGridAspectRatio(for: displayedMonth), contentMode: .fit)
+                        .aspectRatio(currentMonthGridAspectRatio, contentMode: .fit)
                         .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 }
 
@@ -403,40 +408,94 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
     private var pager: some View {
         let dayLookup = Self.makeDaysByDate(from: days)
 
-        return ScrollViewReader { proxy in
-            ScrollView(.horizontal) {
-                LazyHStack(alignment: .top, spacing: 20) {
-                    ForEach(months, id: \.self) { month in
-                        CalendarMonthGridView(
-                            month: month,
-                            selectedDate: $selectedDate,
-                            daysByDate: dayLookup,
-                            cellContent: cellContent,
-                            weekdayLabelContent: weekdayLabelContent,
-                            onDayTapped: { tappedDate in
-                                handleDayTapped(tappedDate, dayLookup: dayLookup)
+        return GeometryReader { viewport in
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal) {
+                    LazyHStack(alignment: .top, spacing: 20) {
+                        ForEach(months, id: \.self) { month in
+                            CalendarMonthGridView(
+                                month: month,
+                                selectedDate: $selectedDate,
+                                daysByDate: dayLookup,
+                                cellContent: cellContent,
+                                weekdayLabelContent: weekdayLabelContent,
+                                onDayTapped: { tappedDate in
+                                    handleDayTapped(tappedDate, dayLookup: dayLookup)
+                                }
+                            )
+                            .containerRelativeFrame(.horizontal, alignment: .top)
+                            .clipped()
+                            .scrollTransition { effect, phase in
+                                effect
+                                    .opacity(phase.isIdentity ? 1 : 0.15)
+                                    .blur(radius: phase.isIdentity ? 0 : 2)
                             }
-                        )
-                        .containerRelativeFrame(.horizontal, alignment: .top)
-                        .clipped()
-                        .scrollTransition { effect, phase in
-                            effect
-                                .opacity(phase.isIdentity ? 1 : 0.15)
-                                .blur(radius: phase.isIdentity ? 0 : 2)
+                            .overlay {
+                                GeometryReader { monthProxy in
+                                    Color.clear.preference(
+                                        key: MonthGridPhasePreferenceKey.self,
+                                        value: [monthGridPhaseSample(for: month, monthProxy: monthProxy, viewportWidth: viewport.size.width)]
+                                    )
+                                }
+                            }
+                            .id(month)
                         }
-                        .id(month)
                     }
+                    .scrollTargetLayout()
                 }
-                .scrollTargetLayout()
-            }
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: $scrolledMonth, anchor: .center)
-            .scrollIndicators(.hidden)
-            .scrollClipDisabled()
-            .onAppear {
-                recenterPagerAfterInitialLayout(using: proxy)
+                .coordinateSpace(name: monthPagerCoordinateSpace)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $scrolledMonth, anchor: .center)
+                .scrollIndicators(.hidden)
+                .scrollClipDisabled()
+                .onAppear {
+                    recenterPagerAfterInitialLayout(using: proxy)
+                }
+                .onPreferenceChange(MonthGridPhasePreferenceKey.self) { samples in
+                    interactiveMonthGridAspectRatio = interpolatedMonthGridAspectRatio(from: samples)
+                }
             }
         }
+    }
+
+    private var currentMonthGridAspectRatio: CGFloat {
+        interactiveMonthGridAspectRatio ?? monthGridAspectRatio(for: displayedMonth)
+    }
+
+    private func interpolatedMonthGridAspectRatio(from samples: [MonthGridPhaseSample]) -> CGFloat {
+        let sorted = samples.sorted { $0.distance < $1.distance }
+        guard let first = sorted.first else {
+            return monthGridAspectRatio(for: displayedMonth)
+        }
+
+        if first.distance <= 0.0001 {
+            return first.aspectRatio
+        }
+
+        guard sorted.count > 1 else {
+            return first.aspectRatio
+        }
+
+        let second = sorted[1]
+        let firstWeight = max(0, 1 - first.distance)
+        let secondWeight = max(0, 1 - second.distance)
+        let totalWeight = firstWeight + secondWeight
+
+        guard totalWeight > 0 else {
+            return first.aspectRatio
+        }
+
+        return ((first.aspectRatio * firstWeight) + (second.aspectRatio * secondWeight)) / totalWeight
+    }
+
+    private func monthGridPhaseSample(for month: Date, monthProxy: GeometryProxy, viewportWidth: CGFloat) -> MonthGridPhaseSample {
+        let frame = monthProxy.frame(in: .named(monthPagerCoordinateSpace))
+        let viewportMidX = viewportWidth / 2
+
+        // Normalize by page width so adjacent pages approach distance ~= 1.
+        let normalizer = max(frame.width, 1)
+        let distance = min(1, abs(frame.midX - viewportMidX) / normalizer)
+        return MonthGridPhaseSample(distance: distance, aspectRatio: monthGridAspectRatio(for: month))
     }
 
     private func recenterPagerAfterInitialLayout(using proxy: ScrollViewProxy) {
@@ -501,5 +560,18 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
         var copy = self
         copy.dateSelectHandler = handler
         return copy
+    }
+}
+
+private struct MonthGridPhaseSample: Equatable {
+    let distance: CGFloat
+    let aspectRatio: CGFloat
+}
+
+private struct MonthGridPhasePreferenceKey: PreferenceKey {
+    static let defaultValue: [MonthGridPhaseSample] = []
+
+    static func reduce(value: inout [MonthGridPhaseSample], nextValue: () -> [MonthGridPhaseSample]) {
+        value.append(contentsOf: nextValue())
     }
 }

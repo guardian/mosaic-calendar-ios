@@ -16,6 +16,7 @@ extension MosaicCalendarView {
         let spacing: CGFloat = 0
         let columns = Array(repeating: GridItem(.flexible(), spacing: spacing), count: 3)
 
+#if os(iOS)
         return TabView(selection: Binding(
             get: { headerContext.pickerYear },
             set: { headerContext.setPickerYear($0) }
@@ -36,6 +37,27 @@ extension MosaicCalendarView {
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
+#else
+        return TabView(selection: Binding(
+            get: { headerContext.pickerYear },
+            set: { headerContext.setPickerYear($0) }
+        )) {
+            ForEach(visibleYears, id: \.self) { year in
+                GeometryReader { proxy in
+                    let cellHeight = max(0, (proxy.size.height - (spacing * 3)) / 4)
+
+                    LazyVGrid(columns: columns, spacing: spacing) {
+                        ForEach(1...12, id: \.self) { monthNumber in
+                            monthPickerButton(monthNumber: monthNumber, year: year)
+                                .frame(height: cellHeight)
+                        }
+                    }
+                    .frame(width: proxy.size.width - spacing, height: proxy.size.height, alignment: .top)
+                }
+                .tag(year)
+            }
+        }
+#endif
     }
 
     private func monthPickerButton(monthNumber: Int, year: Int) -> some View {
