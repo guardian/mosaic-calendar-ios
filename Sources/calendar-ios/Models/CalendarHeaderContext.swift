@@ -3,16 +3,16 @@ import Observation
 
 @Observable
 public final class CalendarHeaderContext: CalendarHeaderContextRepresentable {
-    public private(set) var displayMode: CalendarHeaderDisplayMode
-    public private(set) var month: Date
-    public private(set) var pickerYear: Int
-    public private(set) var canGoToPreviousMonth: Bool
-    public private(set) var canGoToNextMonth: Bool
-    public private(set) var canGoToPreviousYear: Bool
-    public private(set) var canGoToNextYear: Bool
+    public private(set) var displayMode: CalendarHeaderDisplayMode = .month
+    public private(set) var month: Date = Date()
+    public private(set) var pickerYear: Int = Calendar.current.component(.year, from: Date())
+    public private(set) var canGoToPreviousMonth: Bool = false
+    public private(set) var canGoToNextMonth: Bool = false
+    public private(set) var canGoToPreviousYear: Bool = false
+    public private(set) var canGoToNextYear: Bool = false
 
-    private let minimumVisibleYear: Int
-    private let maximumVisibleYear: Int
+    private var minimumVisibleYear: Int = 0
+    private var maximumVisibleYear: Int = 0
 
     var requestedMonthOffset: Int?
     var requestedMonthSelection: Date?
@@ -25,15 +25,17 @@ public final class CalendarHeaderContext: CalendarHeaderContextRepresentable {
         maximumVisibleYear: Int
     ) {
         let year = Calendar.current.component(.year, from: month)
+        let minVisibleYear = min(minimumVisibleYear, maximumVisibleYear)
+        let maxVisibleYear = max(minimumVisibleYear, maximumVisibleYear)
         self.displayMode = .month
         self.month = month
         self.pickerYear = year
         self.canGoToPreviousMonth = canGoToPreviousMonth
         self.canGoToNextMonth = canGoToNextMonth
-        self.minimumVisibleYear = min(minimumVisibleYear, maximumVisibleYear)
-        self.maximumVisibleYear = max(minimumVisibleYear, maximumVisibleYear)
-        self.canGoToPreviousYear = year > self.minimumVisibleYear
-        self.canGoToNextYear = year < self.maximumVisibleYear
+        self.minimumVisibleYear = minVisibleYear
+        self.maximumVisibleYear = maxVisibleYear
+        self.canGoToPreviousYear = year > minVisibleYear
+        self.canGoToNextYear = year < maxVisibleYear
     }
 
     public func changeMonth(by value: Int) {
@@ -76,11 +78,21 @@ public final class CalendarHeaderContext: CalendarHeaderContextRepresentable {
     func apply(
         month: Date,
         canGoToPreviousMonth: Bool,
-        canGoToNextMonth: Bool
+        canGoToNextMonth: Bool,
+        minimumVisibleYear: Int,
+        maximumVisibleYear: Int
     ) {
+        self.minimumVisibleYear = min(minimumVisibleYear, maximumVisibleYear)
+        self.maximumVisibleYear = max(minimumVisibleYear, maximumVisibleYear)
         self.month = month
         self.canGoToPreviousMonth = canGoToPreviousMonth
         self.canGoToNextMonth = canGoToNextMonth
+
+        if pickerYear < self.minimumVisibleYear {
+            pickerYear = self.minimumVisibleYear
+        } else if pickerYear > self.maximumVisibleYear {
+            pickerYear = self.maximumVisibleYear
+        }
 
         if displayMode == .month {
             pickerYear = Calendar.current.component(.year, from: month)

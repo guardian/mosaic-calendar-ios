@@ -10,8 +10,8 @@ struct CalendarMonthGridView<Cell: View>: View {
     // Current selected date
     @Binding var selectedDate: Date?
 
-    // Any custom data model mapped to this month's days.
-    let daysByDate: [Date: any CalendarDayRepresentable]
+    // Any custom data model mapped to calendar days.
+    @Binding var days: [any CalendarDayRepresentable]
 
     // View for each of the day cells in the grid.
     let cellContent: (any CalendarDayRepresentable) -> Cell
@@ -29,7 +29,7 @@ struct CalendarMonthGridView<Cell: View>: View {
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 0) {
-            ForEach(Array(days.enumerated()), id: \.offset) { _, date in
+            ForEach(Array(monthDays.enumerated()), id: \.offset) { _, date in
                 Group {
                     if let date {
                         Button {
@@ -54,6 +54,15 @@ struct CalendarMonthGridView<Cell: View>: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
+    /// Fast lookup table for bound day models, keyed by start-of-day.
+    private var daysByDate: [Date: any CalendarDayRepresentable] {
+        let calendar = Calendar.current
+        return Dictionary(
+            days.map { (calendar.startOfDay(for: $0.date), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+
     /// The caller-supplied day for a date (or a default), with the calendar's
     /// isToday/isSelected state applied.
     private func representable(for date: Date) -> any CalendarDayRepresentable {
@@ -64,7 +73,7 @@ struct CalendarMonthGridView<Cell: View>: View {
     }
 
     /// All cells for the month. nil entries pad the leading days before the 1st.
-    private var days: [Date?] {
+    private var monthDays: [Date?] {
         let calendar: Calendar = .current
         guard let range = calendar.range(of: .day, in: .month, for: month),
               let firstOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: month))

@@ -19,25 +19,7 @@ Date.now.monthAndYear.adding(months: -24)!...Date.now.monthAndYear.adding(months
 }
 
 #Preview("Custom Header + Custom Weekday + Month Picker + Callbacks") {
-    ScrollView {
-        MosaicCalendarView(days: previewDays, range: previewRange) { day in
-            PreviewDayCell(day: day)
-        } header: { context in
-            PreviewHeaderView(context: context)
-        } weekday: { symbol in
-            PreviewWeekdayLabel(symbol: symbol)
-        } month: { context in
-            PreviewMonthPickerCell(context: context)
-        }
-        .onDateSelected { _, _ in
-            print("Date selected")
-        }
-        .onMonthChange { _ in
-            print("Month changed")
-        }
-        .padding()
-        .border(.purple)
-    }
+    InteractiveCalendarPreview()
 }
 
 #Preview("Default Header + Weekday Labels") {
@@ -195,6 +177,63 @@ private struct PreviewMonthPickerCell: CalendarMonthViewable {
                     .fill(context.isSelected ? Color.purple : Color.purple.opacity(0.15))
             }
             .padding(5)
+    }
+}
+
+private struct InteractiveCalendarPreview: View {
+    @State private var days = previewDays
+    @State private var range: ClosedRange<Date>? = previewRange
+
+    private var bridgedDaysBinding: Binding<[any CalendarDayRepresentable]> {
+        Binding<[any CalendarDayRepresentable]>(
+            get: { days.map { $0 as any CalendarDayRepresentable } },
+            set: { newValue in
+                days = newValue.compactMap { $0 as? PreviewCalendarDay }
+            }
+        )
+    }
+
+    private let randomColors: [Color] = [.blue, .green, .orange, .pink, .purple, .red, .teal, .indigo]
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                Button("Randomize One Day Color") {
+                    randomizeOneDayColor()
+                }
+
+                MosaicCalendarView(days: bridgedDaysBinding, range: $range) { day in
+                    PreviewDayCell(day: day)
+                } header: { context in
+                    PreviewHeaderView(context: context)
+                } weekday: { symbol in
+                    PreviewWeekdayLabel(symbol: symbol)
+                } month: { context in
+                    PreviewMonthPickerCell(context: context)
+                }
+                .onDateSelected { _, _ in
+                    print("Date selected")
+                }
+                .onMonthChange { _ in
+                    print("Month changed")
+                }
+                .padding()
+                .border(.purple)
+            }
+        }
+    }
+
+    private func randomizeOneDayColor() {
+        guard days.isEmpty == false else { return }
+        let randomIndex = Int.random(in: 0..<days.count)
+        let currentColor = days[randomIndex].color
+        let availableColors = randomColors.filter { $0 != currentColor }
+        guard let nextColor = availableColors.randomElement() else { return }
+
+        // Reassign the array so state change is unambiguous to SwiftUI.
+        var updatedDays = days
+        updatedDays[randomIndex].color = nextColor
+        days = updatedDays
     }
 }
 
