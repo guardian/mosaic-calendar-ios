@@ -30,11 +30,6 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
         Self.makeVisibleMonths(calendar: calendar, range: range, anchor: anchorMonth)
     }
 
-    /// Days keyed by the start of their date.
-    private var daysByDate: [Date: any CalendarDayRepresentable] {
-        Self.makeDaysByDate(from: days)
-    }
-
     /// Builds the view for a given day.
     private let cellContent: (any CalendarDayRepresentable) -> Cell
 
@@ -391,13 +386,13 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
     }
 
     /// Invokes the registered handler with the selected date and its mark.
-    private func notifyDateSelect(_ date: Date) {
-        dateSelectHandler?(date, daysByDate[date.beginningOfDay])
+    private func notifyDateSelect(_ date: Date, dayLookup: [Date: any CalendarDayRepresentable]) {
+        dateSelectHandler?(date, dayLookup[date.beginningOfDay])
     }
 
-    private func handleDayTapped(_ date: Date) {
+    private func handleDayTapped(_ date: Date, dayLookup: [Date: any CalendarDayRepresentable]) {
         selectedDate = date
-        notifyDateSelect(date)
+        notifyDateSelect(date, dayLookup: dayLookup)
     }
 
     // MARK: - Paging grid
@@ -406,17 +401,21 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
     /// visible month (and its immediate neighbors) are ever instantiated.
     ///
     private var pager: some View {
-        ScrollViewReader { proxy in
+        let dayLookup = Self.makeDaysByDate(from: days)
+
+        return ScrollViewReader { proxy in
             ScrollView(.horizontal) {
                 LazyHStack(alignment: .top, spacing: 20) {
                     ForEach(months, id: \.self) { month in
                         CalendarMonthGridView(
                             month: month,
                             selectedDate: $selectedDate,
-                            days: $days,
+                            daysByDate: dayLookup,
                             cellContent: cellContent,
                             weekdayLabelContent: weekdayLabelContent,
-                            onDayTapped: handleDayTapped
+                            onDayTapped: { tappedDate in
+                                handleDayTapped(tappedDate, dayLookup: dayLookup)
+                            }
                         )
                         .containerRelativeFrame(.horizontal, alignment: .top)
                         .clipped()

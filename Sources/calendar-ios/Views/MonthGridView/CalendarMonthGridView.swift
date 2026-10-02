@@ -10,8 +10,8 @@ struct CalendarMonthGridView<Cell: View>: View {
     // Current selected date
     @Binding var selectedDate: Date?
 
-    // Any custom data model mapped to calendar days.
-    @Binding var days: [any CalendarDayRepresentable]
+    // Precomputed day lookup keyed by start-of-day.
+    let daysByDate: [Date: any CalendarDayRepresentable]
 
     // View for each of the day cells in the grid.
     let cellContent: (any CalendarDayRepresentable) -> Cell
@@ -52,15 +52,6 @@ struct CalendarMonthGridView<Cell: View>: View {
             weekdayLabels
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    }
-
-    /// Fast lookup table for bound day models, keyed by start-of-day.
-    private var daysByDate: [Date: any CalendarDayRepresentable] {
-        let calendar = Calendar.current
-        return Dictionary(
-            days.map { (calendar.startOfDay(for: $0.date), $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
     }
 
     /// The caller-supplied day for a date (or a default), with the calendar's
