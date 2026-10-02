@@ -315,17 +315,21 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
         VStack(spacing: 0) {
             headerContent(headerContext)
             ZStack(alignment: .top) {
-                pager
-                    .scaleEffect(x: headerContext.displayMode == .year ? 0.9 : 1, y: headerContext.displayMode == .year ? 0.9 : 1, anchor: .center)
-                    .opacity(headerContext.displayMode == .year ? 0.01 : 1)
-                monthPicker
-                    .frame(maxWidth: .infinity)
-                    .aspectRatio(1, contentMode: .fit)
-                    .blur(radius: headerContext.displayMode == .month ? 5 : 0)
-                    .scaleEffect(x: headerContext.displayMode == .month ? 1.1 : 1, y: headerContext.displayMode == .month ? 1.1 : 1, anchor: .center)
-                    .opacity(headerContext.displayMode == .month ? 0.01 : 1)
+                if headerContext.displayMode == .month {
+                    pager
+                        .aspectRatio(monthGridAspectRatio(for: displayedMonth), contentMode: .fit)
+                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                }
+
+                if headerContext.displayMode == .year {
+                    monthPicker
+                        .frame(maxWidth: .infinity)
+                        .aspectRatio(1, contentMode: .fit)
+                        .transition(.opacity.combined(with: .scale(scale: 1.02)))
+                }
             }
             .animation(.spring, value: headerContext.displayMode)
+            .animation(.easeInOut(duration: 0.2), value: displayedMonth)
         }
         .onAppear {
             syncHeaderContext()
@@ -414,7 +418,6 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
                             weekdayLabelContent: weekdayLabelContent,
                             onDayTapped: handleDayTapped
                         )
-                        .aspectRatio(1, contentMode: .fit)
                         .containerRelativeFrame(.horizontal, alignment: .top)
                         .clipped()
                         .scrollTransition { effect, phase in
@@ -459,6 +462,27 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
                 proxy.scrollTo(targetMonth, anchor: .center)
             }
         }
+    }
+
+    /// Keeps day cells square while reducing total height for 4/5-week months.
+    private func monthGridAspectRatio(for month: Date) -> CGFloat {
+        let weekRows = weekRowCount(for: month)
+        let totalRows = weekRows + 1 // +1 for weekday labels
+        return 7.0 / CGFloat(totalRows)
+    }
+
+    private func weekRowCount(for month: Date) -> Int {
+        guard let dayRange = calendar.range(of: .day, in: .month, for: month),
+              let firstOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: month))
+        else {
+            return 6
+        }
+
+        let weekdayOfFirst = calendar.component(.weekday, from: firstOfMonth)
+        let leadingEmptyCount = (weekdayOfFirst - calendar.firstWeekday + 7) % 7
+        let totalDayCells = leadingEmptyCount + dayRange.count
+
+        return Int(ceil(Double(totalDayCells) / 7.0))
     }
 
     // MARK: - Modifiers
