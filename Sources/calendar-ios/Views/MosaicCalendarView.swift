@@ -17,6 +17,10 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
     /// Continuously updated during horizontal drag to smoothly blend month heights.
     @State private var interactiveMonthGridAspectRatio: CGFloat?
 
+    /// Width-to-height ratio reported by the day cell view via
+    /// `calendarDayAspectRatio(_:)`. Drives the month container's bounds.
+    @State private var dayCellAspectRatio: CGFloat = CalendarGridMetrics.defaultDayCellAspectRatio
+
     /// Observable month state consumed by custom headers.
     @State var headerContext: CalendarHeaderContext
 
@@ -421,7 +425,8 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
                                 weekdayLabelContent: weekdayLabelContent,
                                 onDayTapped: { tappedDate in
                                     handleDayTapped(tappedDate, dayLookup: dayLookup)
-                                }
+                                },
+                                dayCellAspectRatio: dayCellAspectRatio
                             )
                             .containerRelativeFrame(.horizontal, alignment: .top)
                             .clipped()
@@ -453,6 +458,14 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
                 }
                 .onPreferenceChange(MonthGridPhasePreferenceKey.self) { samples in
                     interactiveMonthGridAspectRatio = interpolatedMonthGridAspectRatio(from: samples)
+                }
+                .onPreferenceChange(CalendarDayAspectRatioPreferenceKey.self) { reported in
+                    // Cells declare their own ratio; adopt it so the container
+                    // reserves exactly enough height for every row.
+                    let resolved = reported ?? CalendarGridMetrics.defaultDayCellAspectRatio
+                    if dayCellAspectRatio != resolved {
+                        dayCellAspectRatio = resolved
+                    }
                 }
             }
         }
@@ -522,11 +535,13 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
         }
     }
 
-    /// Sizes the month container to exactly fit its weekday label row plus
-    /// its week rows, honoring the day cell aspect ratio so the last row can
-    /// never overflow the calendar's bounds.
+    /// Sizes the month container to exactly fit its weekday label row plus its
+    /// week rows, honoring the aspect ratio the day cell declared.
     private func monthGridAspectRatio(for month: Date) -> CGFloat {
-        CalendarGridMetrics.monthGridAspectRatio(weekRows: weekRowCount(for: month))
+        CalendarGridMetrics.monthGridAspectRatio(
+            weekRows: weekRowCount(for: month),
+            dayCellAspectRatio: dayCellAspectRatio
+        )
     }
 
     private func weekRowCount(for month: Date) -> Int {

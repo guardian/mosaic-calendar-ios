@@ -156,6 +156,9 @@ private struct PreviewDayCell: CalendarDayViewable {
             .contentShape(Rectangle())
             .accessibilityLabel(accessibilityLabel)
             .accessibilityAddTraits(day.isSelected ? [.isSelected] : [])
+            // The cell decides its own proportions; the calendar adapts its
+            // bounds to match.
+            .calendarDayAspectRatio(0.85)
     }
 
     private var accessibilityLabel: String {

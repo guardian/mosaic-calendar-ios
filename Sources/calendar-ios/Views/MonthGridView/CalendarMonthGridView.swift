@@ -22,10 +22,16 @@ struct CalendarMonthGridView<Cell: View>: View {
     // Optional callback fired on every day tap, including re-selecting the same date.
     let onDayTapped: (Date) -> Void
 
+    // Width-to-height ratio for day cells, resolved from the cell view itself.
+    var dayCellAspectRatio: CGFloat = CalendarGridMetrics.defaultDayCellAspectRatio
+
     let columns = Array(
         repeating: GridItem(.flexible(), spacing: 0),
         count: 7
     )
+
+    /// Width-to-height ratio applied to every day cell.
+    static var dayCellAspectRatio: CGFloat { 0.85 }
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 0) {
@@ -45,7 +51,7 @@ struct CalendarMonthGridView<Cell: View>: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .aspectRatio(CalendarGridMetrics.dayCellAspectRatio, contentMode: .fill)
+                .aspectRatio(dayCellAspectRatio, contentMode: .fill)
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
