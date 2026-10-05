@@ -17,7 +17,7 @@ extension CalendarMonthGridView {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .aspectRatio(1.0, contentMode: .fit)
+                .aspectRatio(CalendarGridMetrics.weekdayLabelAspectRatio, contentMode: .fit)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

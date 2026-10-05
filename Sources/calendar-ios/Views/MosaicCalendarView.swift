@@ -522,11 +522,11 @@ public struct MosaicCalendarView<Header: CalendarHeaderViewable, Cell: CalendarD
         }
     }
 
-    /// Keeps day cells square while reducing total height for 4/5-week months.
+    /// Sizes the month container to exactly fit its weekday label row plus
+    /// its week rows, honoring the day cell aspect ratio so the last row can
+    /// never overflow the calendar's bounds.
     private func monthGridAspectRatio(for month: Date) -> CGFloat {
-        let weekRows = weekRowCount(for: month)
-        let totalRows = weekRows + 1 // +1 for weekday labels
-        return 7.0 / CGFloat(totalRows)
+        CalendarGridMetrics.monthGridAspectRatio(weekRows: weekRowCount(for: month))
     }
 
     private func weekRowCount(for month: Date) -> Int {

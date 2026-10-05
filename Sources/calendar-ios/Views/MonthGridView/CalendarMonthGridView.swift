@@ -45,7 +45,7 @@ struct CalendarMonthGridView<Cell: View>: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .aspectRatio(1.0, contentMode: .fill)
+                .aspectRatio(CalendarGridMetrics.dayCellAspectRatio, contentMode: .fill)
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
