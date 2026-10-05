@@ -25,39 +25,54 @@ struct CalendarMonthGridView<Cell: View>: View {
     // Width-to-height ratio for day cells, resolved from the cell view itself.
     var dayCellAspectRatio: CGFloat = CalendarGridMetrics.defaultDayCellAspectRatio
 
-    let columns = Array(
-        repeating: GridItem(.flexible(), spacing: 0),
-        count: 7
-    )
+    /// Number of columns in the grid, one per weekday.
+    static var columnCount: Int { 7 }
 
-    /// Width-to-height ratio applied to every day cell.
-    static var dayCellAspectRatio: CGFloat { 0.85 }
+    /// Guards against a zero/negative ratio reported by a cell.
+    var resolvedDayCellAspectRatio: CGFloat {
+        dayCellAspectRatio > 0 ? dayCellAspectRatio : CalendarGridMetrics.defaultDayCellAspectRatio
+    }
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 0) {
-            ForEach(Array(monthDays.enumerated()), id: \.offset) { _, date in
-                Group {
-                    if let date {
-                        Button {
-                            selectedDate = date
-                            onDayTapped(date)
-                        } label: {
-                            cellContent(representable(for: date))
+        // Column widths are computed explicitly instead of relying on
+        // `LazyVGrid(.flexible())`, which hands leftover width to the outer
+        // columns and makes them visibly wider than the rest.
+        GeometryReader { proxy in
+            let columnWidth = proxy.size.width / CGFloat(Self.columnCount)
+            let dayHeight = columnWidth / resolvedDayCellAspectRatio
+            let labelHeight = columnWidth / CalendarGridMetrics.weekdayLabelAspectRatio
+
+            VStack(spacing: 0) {
+                weekdayLabels(columnWidth: columnWidth, rowHeight: labelHeight)
+
+                ForEach(Array(weekRows.enumerated()), id: \.offset) { _, week in
+                    HStack(spacing: 0) {
+                        ForEach(Array(week.enumerated()), id: \.offset) { _, date in
+                            dayCell(for: date)
+                                .frame(width: columnWidth, height: dayHeight, alignment: .top)
                         }
-                        .buttonStyle(.plain)
-                    } else {
-                        // Empty leading slot for days before the 1st.
-                        Color.clear
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .aspectRatio(dayCellAspectRatio, contentMode: .fill)
             }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            weekdayLabels
+            .frame(width: proxy.size.width, alignment: .top)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder
+    private func dayCell(for date: Date?) -> some View {
+        if let date {
+            Button {
+                selectedDate = date
+                onDayTapped(date)
+            } label: {
+                cellContent(representable(for: date))
+            }
+            .buttonStyle(.plain)
+        } else {
+            // Empty slot for days outside the month.
+            Color.clear
+        }
     }
 
     /// The caller-supplied day for a date (or a default), with the calendar's
@@ -67,6 +82,20 @@ struct CalendarMonthGridView<Cell: View>: View {
         day.isToday = date.isToday
         day.isSelected = selectedDate.map { $0.isSameDay(as: date) } ?? false
         return day
+    }
+
+    /// Month cells chunked into fixed-width weeks, padded on both ends so every
+    /// row has exactly `columnCount` entries.
+    private var weekRows: [[Date?]] {
+        var cells = monthDays
+        let remainder = cells.count % Self.columnCount
+        if remainder != 0 {
+            cells.append(contentsOf: Array(repeating: nil, count: Self.columnCount - remainder))
+        }
+
+        return stride(from: 0, to: cells.count, by: Self.columnCount).map { start in
+            Array(cells[start..<start + Self.columnCount])
+        }
     }
 
     /// All cells for the month. nil entries pad the leading days before the 1st.

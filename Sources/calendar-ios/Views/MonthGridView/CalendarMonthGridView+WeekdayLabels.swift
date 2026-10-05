@@ -4,8 +4,10 @@ import SwiftUI
 
 extension CalendarMonthGridView {
 
-    var weekdayLabels: some View {
-        LazyVGrid(columns: columns, spacing: 0) {
+    /// Laid out with the same explicit column width as the day rows so the
+    /// labels stay aligned with their columns.
+    func weekdayLabels(columnWidth: CGFloat, rowHeight: CGFloat) -> some View {
+        HStack(spacing: 0) {
             ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                 Group {
                     if let weekdayLabelContent {
@@ -16,13 +18,11 @@ extension CalendarMonthGridView {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .aspectRatio(CalendarGridMetrics.weekdayLabelAspectRatio, contentMode: .fit)
+                .frame(width: columnWidth, height: rowHeight)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
-    
+
     /// Localized short weekday symbols reordered to match the calendar's first weekday.
     private var weekdaySymbols: [String] {
         let calendar: Calendar = .current
