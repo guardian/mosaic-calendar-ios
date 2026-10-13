@@ -62,7 +62,7 @@ extension MosaicCalendarView {
 
     private func monthPickerButton(monthNumber: Int, year: Int) -> some View {
         let calendar = Calendar.current
-        let symbols = calendar.shortMonthSymbols
+        let symbols = calendar.monthSymbols
         let monthLabel = symbols[max(0, min(symbols.count - 1, monthNumber - 1))]
         let monthDate = calendar.date(from: DateComponents(year: year, month: monthNumber, day: 1))?.monthAndYear
         let isEnabled = monthDate.map { months.contains($0) } ?? false

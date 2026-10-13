@@ -125,16 +125,19 @@ Your header receives `CalendarHeaderContext`, which lets you:
 ```swift
 struct CustomWeekdayLabel: CalendarWeekdayViewable {
     let symbol: String
+    /// `true` when the selected date falls on this weekday.
+    let isSelected: Bool
 
     var body: some View {
         Text(symbol)
+            .fontWeight(isSelected ? .bold : .regular)
     }
 }
 
 MosaicCalendarView(days: days) { day in
     DayCell(day: day)
-} weekdayLabel: { symbol in
-    CustomWeekdayLabel(symbol: symbol)
+} weekdayLabel: { symbol, isSelected in
+    CustomWeekdayLabel(symbol: symbol, isSelected: isSelected)
 }
 ```
 
@@ -169,8 +172,8 @@ MosaicCalendarView(days: days, range: range) { day in
     DayCell(day: day)
 } header: { context in
     CustomHeader(context: context)
-} weekday: { symbol in
-    CustomWeekdayLabel(symbol: symbol)
+} weekday: { symbol, isSelected in
+    CustomWeekdayLabel(symbol: symbol, isSelected: isSelected)
 } month: { context in
     CustomMonthTile(context: context)
 }

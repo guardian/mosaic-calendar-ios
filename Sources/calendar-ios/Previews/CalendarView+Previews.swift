@@ -26,8 +26,8 @@ Date.now.monthAndYear.adding(months: -24)!...Date.now.monthAndYear.adding(months
     ScrollView {
         MosaicCalendarView(days: previewDays) { day in
             PreviewDayCell(day: day)
-        } weekdayLabel: { symbol in
-            PreviewWeekdayLabel(symbol: symbol)
+        } weekdayLabel: { symbol, isSelected in
+            PreviewWeekdayLabel(symbol: symbol, isSelected: isSelected)
         }
         .border(.black)
     }
@@ -46,12 +46,19 @@ Date.now.monthAndYear.adding(months: -24)!...Date.now.monthAndYear.adding(months
 
 private struct PreviewWeekdayLabel: CalendarWeekdayViewable {
     let symbol: String
+    let isSelected: Bool
 
     var body: some View {
         Text(symbol)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
+            .font(.caption.weight(isSelected ? .heavy : .semibold))
+            .foregroundStyle(isSelected ? Color.white : Color.secondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                Capsule()
+                    .fill(Color.accentColor)
+                    .opacity(isSelected ? 1 : 0)
+            }
+            .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 
@@ -209,8 +216,8 @@ private struct InteractiveCalendarPreview: View {
                     PreviewDayCell(day: day)
                 } header: { context in
                     PreviewHeaderView(context: context)
-                } weekday: { symbol in
-                    PreviewWeekdayLabel(symbol: symbol)
+                } weekday: { symbol, isSelected in
+                    PreviewWeekdayLabel(symbol: symbol, isSelected: isSelected)
                 } month: { context in
                     PreviewMonthPickerCell(context: context)
                 }

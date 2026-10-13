@@ -13,6 +13,9 @@ enum CalendarGridMetrics {
     /// Width-to-height ratio applied to every weekday label cell.
     static let weekdayLabelAspectRatio: CGFloat = 1.0
 
+    /// Vertical gap between the header and the month grid / month picker.
+    static let headerBottomSpacing: CGFloat = 24
+
     /// The width-to-height ratio of a whole month grid, including the
     /// weekday label row.
     ///

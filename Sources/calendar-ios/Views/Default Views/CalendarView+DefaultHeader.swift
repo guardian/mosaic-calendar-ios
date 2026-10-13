@@ -35,7 +35,7 @@ public extension MosaicCalendarView where Header == CalendarHeaderView {
         days: [any CalendarDayRepresentable] = [],
         range: ClosedRange<Date>? = nil,
         @ViewBuilder cell: @escaping (any CalendarDayRepresentable) -> Cell,
-        @ViewBuilder weekdayLabel: @escaping (String) -> WeekdayLabel
+        @ViewBuilder weekdayLabel: @escaping (String, Bool) -> WeekdayLabel
     ) {
         self.init(days: days, range: range, cell: cell, header: { context in
             CalendarHeaderView(context: context)
@@ -46,7 +46,7 @@ public extension MosaicCalendarView where Header == CalendarHeaderView {
         days: Binding<[any CalendarDayRepresentable]>,
         range: ClosedRange<Date>? = nil,
         @ViewBuilder cell: @escaping (any CalendarDayRepresentable) -> Cell,
-        @ViewBuilder weekdayLabel: @escaping (String) -> WeekdayLabel
+        @ViewBuilder weekdayLabel: @escaping (String, Bool) -> WeekdayLabel
     ) {
         self.init(days: days, range: range, cell: cell, header: { context in
             CalendarHeaderView(context: context)
@@ -57,7 +57,7 @@ public extension MosaicCalendarView where Header == CalendarHeaderView {
         days: Binding<[any CalendarDayRepresentable]>,
         range: Binding<ClosedRange<Date>?>,
         @ViewBuilder cell: @escaping (any CalendarDayRepresentable) -> Cell,
-        @ViewBuilder weekdayLabel: @escaping (String) -> WeekdayLabel
+        @ViewBuilder weekdayLabel: @escaping (String, Bool) -> WeekdayLabel
     ) {
         self.init(days: days, range: range, cell: cell, header: { context in
             CalendarHeaderView(context: context)
@@ -101,7 +101,7 @@ public extension MosaicCalendarView where Header == CalendarHeaderView {
         days: [any CalendarDayRepresentable] = [],
         range: ClosedRange<Date>? = nil,
         @ViewBuilder cell: @escaping (any CalendarDayRepresentable) -> Cell,
-        @ViewBuilder weekdayLabel: @escaping (String) -> WeekdayLabel,
+        @ViewBuilder weekdayLabel: @escaping (String, Bool) -> WeekdayLabel,
         @ViewBuilder month: @escaping (CalendarMonthPickerCellContext) -> MonthPickerCell
     ) {
         self.init(days: days, range: range, cell: cell, header: { context in
@@ -113,7 +113,7 @@ public extension MosaicCalendarView where Header == CalendarHeaderView {
         days: Binding<[any CalendarDayRepresentable]>,
         range: ClosedRange<Date>? = nil,
         @ViewBuilder cell: @escaping (any CalendarDayRepresentable) -> Cell,
-        @ViewBuilder weekdayLabel: @escaping (String) -> WeekdayLabel,
+        @ViewBuilder weekdayLabel: @escaping (String, Bool) -> WeekdayLabel,
         @ViewBuilder month: @escaping (CalendarMonthPickerCellContext) -> MonthPickerCell
     ) {
         self.init(days: days, range: range, cell: cell, header: { context in
@@ -125,7 +125,7 @@ public extension MosaicCalendarView where Header == CalendarHeaderView {
         days: Binding<[any CalendarDayRepresentable]>,
         range: Binding<ClosedRange<Date>?>,
         @ViewBuilder cell: @escaping (any CalendarDayRepresentable) -> Cell,
-        @ViewBuilder weekdayLabel: @escaping (String) -> WeekdayLabel,
+        @ViewBuilder weekdayLabel: @escaping (String, Bool) -> WeekdayLabel,
         @ViewBuilder month: @escaping (CalendarMonthPickerCellContext) -> MonthPickerCell
     ) {
         self.init(days: days, range: range, cell: cell, header: { context in

@@ -17,7 +17,8 @@ struct CalendarMonthGridView<Cell: View>: View {
     let cellContent: (any CalendarDayRepresentable) -> Cell
 
     // Optional view provided for each of the weekday labels above the grid.
-    let weekdayLabelContent: ((String) -> AnyView)?
+    // Receives the symbol and whether the selected date falls on that weekday.
+    let weekdayLabelContent: ((String, Bool) -> AnyView)?
 
     // Optional callback fired on every day tap, including re-selecting the same date.
     let onDayTapped: (Date) -> Void
